@@ -1,0 +1,48 @@
+name: Docker Build and Push to GHCR
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+
+jobs:
+
+  docker-build-push:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+
+    - name: Build anomaly detector
+      uses: docker/build-push-action@v6
+      with:
+        context: ./aiops/01-anomaly-detection
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/anomaly-detector:latest
+
+
+    - name: Build load forecaster
+      uses: docker/build-push-action@v6
+      with:
+        context: ./aiops/02-forecasting
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/load-forecaster:latest
