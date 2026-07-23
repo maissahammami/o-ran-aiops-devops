@@ -1,0 +1,52 @@
+global:
+  namespace: ricrapp
+  image:
+    registry: ghcr.io/<votre-org>/energy-saver-tests
+    tag: latest
+    pullPolicy: IfNotPresent
+  kafka:
+    bootstrapServers: "nonrtric-kafka-kafka-bootstrap.kafka.svc.cluster.local:9092"
+  influxdb:
+    host: "influxdb.smo.svc.cluster.local"
+    port: 8086
+    database: "smo"
+
+prometheusVesBridge:
+  enabled: true
+  pollIntervalSeconds: 10
+  vesCollectorUrl: "http://ves-collector.smo.svc.cluster.local:9999/eventListener/v5"
+  xappPrometheusUrls:
+    - "http://service-ricxapp-xappmonitoring1-prometheus.ricxapp:9090/metrics"
+    - "http://service-ricxapp-xappmonitoring2-prometheus.ricxapp:9090/metrics"
+    - "http://service-ricxapp-xappmonitoring3-prometheus.ricxapp:9090/metrics"
+    - "http://service-ricxapp-xappmonitoring4-prometheus.ricxapp:9090/metrics"
+
+anomalyDetection:
+  enabled: true
+  pollIntervalSeconds: 30
+  windowSize: 50
+  zScoreThreshold: 3.0
+  resources:
+    requests: {cpu: "100m", memory: "128Mi"}
+    limits: {cpu: "500m", memory: "512Mi"}
+
+loadForecasting:
+  enabled: true
+  schedule: "*/5 * * * *"
+  historyWindows: 12
+  forecastHorizonMinutes: 15
+
+rca:
+  enabled: true
+  intervalSeconds: 60
+  watchedNamespaces: "ricplt,ricrapp,ricxapp,smo,nonrtric,kafka"
+
+autoRemediation:
+  enabled: false   # désactivé par défaut: à activer volontairement après validation des règles
+  dryRun: true
+  intervalSeconds: 60
+  watchedNamespaces: "ricplt,ricrapp,ricxapp,smo,nonrtric,kafka"
+
+mlSurrogate:
+  enabled: false   # nécessite un historique CPLEX suffisant avant d'être utile
+  servicePort: 8000

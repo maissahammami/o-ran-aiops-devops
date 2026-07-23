@@ -1,0 +1,31 @@
+{{- if .Values.loadForecasting.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: load-forecaster
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/part-of: energy-saver-addon
+spec:
+  schedule: {{ .Values.loadForecasting.schedule | quote }}
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: forecaster
+              image: "{{ .Values.global.image.registry }}/load-forecaster:{{ .Values.global.image.tag }}"
+              imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+              args: ["--once"]
+              env:
+                - name: INFLUXDB_HOST
+                  value: {{ .Values.global.influxdb.host | quote }}
+                - name: KAFKA_BOOTSTRAP
+                  value: {{ .Values.global.kafka.bootstrapServers | quote }}
+                - name: HISTORY_WINDOWS
+                  value: {{ .Values.loadForecasting.historyWindows | quote }}
+                - name: FORECAST_HORIZON_MINUTES
+                  value: {{ .Values.loadForecasting.forecastHorizonMinutes | quote }}
+          restartPolicy: OnFailure
+{{- end }}

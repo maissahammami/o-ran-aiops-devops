@@ -1,0 +1,119 @@
+# Expériences Chaos Mesh ciblant les points de fragilité déjà observés
+# pendant ce projet (redémarrages fréquents de strimzi-cluster-operator,
+# pods RIC avec des dizaines de restarts). Objectif: vérifier que le
+# pipeline se rétablit tout seul (ou via le module auto-remediation)
+# plutôt que de découvrir les faiblesses en production.
+#
+# Prérequis: helm install chaos-mesh chaos-mesh/chaos-mesh -n chaos-mesh
+
+---
+# Expérience 1: tuer aléatoirement un pod xApp monitoring toutes les 10 min
+# Vérifie que la perte d'une des 4 sources de métriques ne casse pas tout
+# le pipeline (le pont Prometheus->VES doit continuer avec les 3 restantes).
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: kill-xapp-monitoring
+  namespace: chaos-mesh
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    namespaces: ["ricxapp"]
+    labelSelectors:
+      app: ricxapp-bouncer-xapp
+  scheduler:
+    cron: "@every 10m"
+
+---
+# Expérience 2: latence réseau injectée entre envman et les E2 simulators
+# Reproduit le genre de condition transitoire qu'on a rencontrée (pod en
+# redémarrage au moment précis d'un appel REST) pour valider que envman
+# retry correctement plutôt que de planter.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: envman-to-e2sim-latency
+  namespace: ricplt
+spec:
+  action: delay
+  mode: all
+  selector:
+    namespaces: ["ricplt"]
+    labelSelectors:
+      app: environment-manager
+  delay:
+    latency: "500ms"
+    jitter: "200ms"
+  duration: "2m"
+  scheduler:
+    cron: "@every 30m"
+
+---
+# Expérience 3: coupure réseau complète vers Kafka pendant 1 minute
+# Vérifie que ves-collector et influxdb-connector se reconnectent
+# proprement après la coupure (déjà vu que ce n'était PAS automatique
+# dans une version antérieure de la config — bon test de non-régression).
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: kafka-network-partition
+  namespace: kafka
+spec:
+  action: partition
+  mode: all
+  selector:
+    namespaces: ["kafka"]
+    labelSelectors:
+      strimzi.io/name: nonrtric-kafka-pool
+  direction: both
+  target:
+    mode: all
+    selector:
+      namespaces: ["smo"]
+  duration: "1m"
+  scheduler:
+    cron: "@every 1h"
+
+---
+# Expérience 4: stress CPU sur le pod du rApp pendant l'exécution CPLEX
+# Vérifie que le TimeLimit=60 du solveur est bien respecté même sous
+# contention CPU, et que ça ne dégrade pas la stabilité du pod.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: rapp-cpu-stress
+  namespace: ricrapp
+spec:
+  mode: one
+  selector:
+    namespaces: ["ricrapp"]
+    labelSelectors:
+      app: energy-saver-rapp
+  stressors:
+    cpu:
+      workers: 2
+      load: 80
+  duration: "90s"
+  scheduler:
+    cron: "@every 2h"
+
+---
+# Expérience 5: suppression du pod PolicyManagementService (StatefulSet)
+# Vérifie qu'après redémarrage, le PMS recharge bien sa config des RIC
+# depuis le PVC (cf. le bug de chemin de config qu'on a corrigé) et ne
+# revient pas à un état "rics: []" silencieusement.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: kill-policy-management-service
+  namespace: nonrtric
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    namespaces: ["nonrtric"]
+    labelSelectors:
+      app.kubernetes.io/name: policymanagementservice
+  scheduler:
+    cron: "@every 3h"

@@ -1,0 +1,62 @@
+# Gardien proactif du policy type A1 — vérifie toutes les 2 minutes que
+# le type 5 est bien présent sur ric1, et le recrée immédiatement s'il a
+# disparu (suite à un redémarrage du simulateur a1-sim-osc-0), AVANT que
+# le rApp n'échoue à poster sa policy.
+#
+# Prérequis: le ConfigMap policy-schema-e2node-ue doit déjà exister
+# (cf. aiops/04-auto-remediation/rbac-and-deployment.yaml pour la commande
+# de création).
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: policy-type-guardian
+  namespace: ricrapp
+  labels:
+    app: policy-type-guardian
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: policy-type-guardian
+  template:
+    metadata:
+      labels:
+        app: policy-type-guardian
+    spec:
+      containers:
+        - name: policy-type-guardian
+          image: python:3.11-slim
+          command: ["sh", "-c"]
+          args:
+            - "apt-get update -qq && apt-get install -y -qq curl >/dev/null 2>&1; python /app/policy_type_guardian.py"
+          env:
+            - name: RIC_SIMULATOR_HOST
+              value: "a1-sim-osc-0.nonrtric"
+            - name: PMS_HOST
+              value: "policymanagementservice.nonrtric"
+            - name: RIC_ID
+              value: "ric1"
+            - name: POLICYTYPE_ID
+              value: "5"
+            - name: POLICY_SCHEMA_PATH
+              value: "/config/E2nodeUESchema.json"
+            - name: CHECK_INTERVAL_SECONDS
+              value: "120"
+          volumeMounts:
+            - name: script
+              mountPath: /app/policy_type_guardian.py
+              subPath: policy_type_guardian.py
+            - name: policy-schema
+              mountPath: /config/E2nodeUESchema.json
+              subPath: E2nodeUESchema.json
+          resources:
+            requests: {cpu: "20m", memory: "32Mi"}
+            limits: {cpu: "100m", memory: "128Mi"}
+      volumes:
+        - name: script
+          configMap:
+            name: policy-type-guardian-code
+        - name: policy-schema
+          configMap:
+            name: policy-schema-e2node-ue

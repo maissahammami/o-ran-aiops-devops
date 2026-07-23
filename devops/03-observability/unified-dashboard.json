@@ -1,0 +1,86 @@
+{
+  "title": "Energy-Saver — Vue unifiée du pipeline",
+  "uid": "energy-saver-unified",
+  "tags": ["energy-saver", "aiops"],
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "title": "RSRP moyen par gNB (Prometheus xApps)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "${prometheus_ds}"},
+      "targets": [
+        {"expr": "avg by (gnbid) (e2sm_rc_report_style4_rsrp)", "legendFormat": "gNB {{gnbid}}"}
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Nombre d'UE connectés par gNB",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "datasource": {"type": "prometheus", "uid": "${prometheus_ds}"},
+      "targets": [
+        {"expr": "count by (gnbid) (e2sm_rc_report_style4_rrc_state == 1)", "legendFormat": "gNB {{gnbid}}"}
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Logs d'erreur récents (tous namespaces)",
+      "type": "logs",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+      "datasource": {"type": "loki", "uid": "${loki_ds}"},
+      "targets": [
+        {"expr": "{namespace=~\"ricplt|ricrapp|ricxapp|smo|nonrtric|kafka\"} |~ \"(?i)error|fail|exception\""}
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Consumer lag Kafka (influxdb-connector, rAppEnergySaver)",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "datasource": {"type": "prometheus", "uid": "${prometheus_ds}"},
+      "targets": [
+        {"expr": "kafka_consumergroup_lag{consumergroup=~\"influxdb-connector|rAppEnergySaver\"}", "legendFormat": "{{consumergroup}} / {{topic}}"}
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Anomalies détectées (module AIOps 01)",
+      "type": "logs",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "datasource": {"type": "loki", "uid": "${loki_ds}"},
+      "targets": [
+        {"expr": "{app=\"anomaly-detector\"} |~ \"Anomalie détectée\""}
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Prévision de charge (module AIOps 02)",
+      "type": "logs",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+      "datasource": {"type": "loki", "uid": "${loki_ds}"},
+      "targets": [
+        {"expr": "{app=\"load-forecaster\"} |~ \"Prévision\""}
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Valeur objectif CPLEX (rApp) au fil du temps",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+      "datasource": {"type": "loki", "uid": "${loki_ds}"},
+      "targets": [
+        {"expr": "{app=\"energy-saver-rapp\"} |~ \"Best objective\""}
+      ]
+    }
+  ],
+  "templating": {
+    "list": [
+      {"name": "prometheus_ds", "type": "datasource", "query": "prometheus"},
+      {"name": "loki_ds", "type": "datasource", "query": "loki"}
+    ]
+  },
+  "refresh": "30s",
+  "schemaVersion": 39
+}

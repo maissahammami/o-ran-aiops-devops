@@ -1,0 +1,74 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: energy-saver
+  namespace: argocd
+spec:
+  description: Projet ArgoCD pour la plateforme Energy-Saver (RIC + AIOps addon)
+  sourceRepos:
+    - "https://github.com/<votre-org>/Energy-Saver-Tests.git"
+  destinations:
+    - namespace: "ricplt"
+      server: "https://kubernetes.default.svc"
+    - namespace: "ricrapp"
+      server: "https://kubernetes.default.svc"
+    - namespace: "ricxapp"
+      server: "https://kubernetes.default.svc"
+    - namespace: "smo"
+      server: "https://kubernetes.default.svc"
+    - namespace: "nonrtric"
+      server: "https://kubernetes.default.svc"
+  clusterResourceWhitelist:
+    - group: "rbac.authorization.k8s.io"
+      kind: ClusterRole
+    - group: "rbac.authorization.k8s.io"
+      kind: ClusterRoleBinding
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: energy-saver-aiops
+  namespace: argocd
+spec:
+  project: energy-saver
+  source:
+    repoURL: "https://github.com/<votre-org>/Energy-Saver-Tests.git"
+    targetRevision: main
+    path: aiops-devops-addon/aiops
+    directory:
+      recurse: true
+      include: "*/deployment.yaml,*/cronjob.yaml,*/rbac-and-deployment.yaml"
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: ricrapp
+  syncPolicy:
+    automated:
+      prune: true       # supprime les ressources retirées du dépôt Git
+      selfHeal: true    # corrige automatiquement toute dérive manuelle du cluster
+    syncOptions:
+      - CreateNamespace=false
+    retry:
+      limit: 3
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: energy-saver-rapp
+  namespace: argocd
+spec:
+  project: energy-saver
+  source:
+    repoURL: "https://github.com/<votre-org>/Energy-Saver-Tests.git"
+    targetRevision: main
+    path: helm-charts/energy-saver-rapp
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: ricrapp
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

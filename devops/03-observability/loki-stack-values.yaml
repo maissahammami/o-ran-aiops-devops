@@ -1,0 +1,32 @@
+# Values pour helm install loki grafana/loki-stack -f loki-stack-values.yaml -n monitoring
+# Centralise les logs de TOUS les pods du cluster (fini les kubectl logs manuels
+# pod par pod comme on a dû faire pendant tout le débogage de ce projet).
+
+loki:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 10Gi
+  config:
+    limits_config:
+      retention_period: 168h  # 7 jours d'historique de logs
+
+promtail:
+  enabled: true
+  config:
+    snippets:
+      pipelineStages:
+        - cri: {}
+        # Extraction automatique du namespace/pod pour faciliter le filtrage
+        - labels:
+            namespace:
+            pod:
+            container:
+
+# Grafana est déjà déployé (namespace monitoring) — on ne redéploie pas de
+# nouvelle instance, on ajoute juste Loki comme datasource supplémentaire.
+grafana:
+  enabled: false
+
+# Datasource à ajouter dans le Grafana existant (prometheus-grafana) via
+# ConfigMap sidecar, cf. grafana-datasource-loki.yaml dans ce même dossier.

@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+venv/
+.env
+*.log
+.pytest_cache/
+.coverage
+.vscode/
+.idea/
+node_modules/
+target/
+dist/
+*.class
+*.jar
+*.war
+.DS_Store

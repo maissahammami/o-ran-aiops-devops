@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: auto-remediator
+  namespace: ricrapp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: auto-remediator-actor
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: auto-remediator-actor-binding
+subjects:
+  - kind: ServiceAccount
+    name: auto-remediator
+    namespace: ricrapp
+roleRef:
+  kind: ClusterRole
+  name: auto-remediator-actor
+  apiGroup: rbac.authorization.k8s.io
+---
+# Copie du schéma de policy type nécessaire pour la remédiation "policy type
+# perdu sur le RIC". Générez ce ConfigMap depuis le fichier réel du projet:
+#   kubectl create configmap policy-schema-e2node-ue -n ricrapp \
+#     --from-file=E2nodeUESchema.json=/home/maissa/Energy-Saver-Tests/scripts/policy_enode_ue/E2nodeUESchema.json
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auto-remediator
+  namespace: ricrapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: auto-remediator
+  template:
+    metadata:
+      labels:
+        app: auto-remediator
+    spec:
+      serviceAccountName: auto-remediator
+      containers:
+        - name: auto-remediator
+          image: bitnami/kubectl:1.29
+          command: ["sh", "-c"]
+          args:
+            - "apt-get update -qq && apt-get install -y -qq python3 >/dev/null 2>&1 || true; python3 /app/remediator.py"
+          env:
+            - name: WATCHED_NAMESPACES
+              value: "ricplt,ricrapp,ricxapp,smo,nonrtric,kafka"
+            # IMPORTANT: laisser en "true" tant que les règles n'ont pas été
+            # validées manuellement dans cet environnement.
+            - name: DRY_RUN
+              value: "true"
+            - name: RIC_SERVICE_FOR_POLICY
+              value: "a1-sim-osc-0.nonrtric"
+            - name: POLICYTYPE_ID
+              value: "5"
+            - name: POLICY_SCHEMA_PATH
+              value: "/config/E2nodeUESchema.json"
+          volumeMounts:
+            - name: script
+              mountPath: /app/remediator.py
+              subPath: remediator.py
+            - name: policy-schema
+              mountPath: /config/E2nodeUESchema.json
+              subPath: E2nodeUESchema.json
+          resources:
+            requests: {cpu: "50m", memory: "64Mi"}
+            limits: {cpu: "200m", memory: "256Mi"}
+      volumes:
+        - name: script
+          configMap:
+            name: auto-remediator-code
+        - name: policy-schema
+          configMap:
+            name: policy-schema-e2node-ue

@@ -1,0 +1,41 @@
+{{- if .Values.anomalyDetection.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anomaly-detector
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: anomaly-detector
+    app.kubernetes.io/part-of: energy-saver-addon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: anomaly-detector
+  template:
+    metadata:
+      labels:
+        app: anomaly-detector
+    spec:
+      containers:
+        - name: anomaly-detector
+          image: "{{ .Values.global.image.registry }}/anomaly-detector:{{ .Values.global.image.tag }}"
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          env:
+            - name: INFLUXDB_HOST
+              value: {{ .Values.global.influxdb.host | quote }}
+            - name: INFLUXDB_PORT
+              value: {{ .Values.global.influxdb.port | quote }}
+            - name: INFLUXDB_DB
+              value: {{ .Values.global.influxdb.database | quote }}
+            - name: KAFKA_BOOTSTRAP
+              value: {{ .Values.global.kafka.bootstrapServers | quote }}
+            - name: POLL_INTERVAL_SECONDS
+              value: {{ .Values.anomalyDetection.pollIntervalSeconds | quote }}
+            - name: WINDOW_SIZE
+              value: {{ .Values.anomalyDetection.windowSize | quote }}
+            - name: Z_SCORE_THRESHOLD
+              value: {{ .Values.anomalyDetection.zScoreThreshold | quote }}
+          resources:
+            {{- toYaml .Values.anomalyDetection.resources | nindent 12 }}
+{{- end }}

@@ -1,0 +1,116 @@
+{{- if .Values.rca.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rca-correlator
+  namespace: {{ .Values.global.namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rca-correlator-reader
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rca-correlator-reader-binding
+subjects:
+  - kind: ServiceAccount
+    name: rca-correlator
+    namespace: {{ .Values.global.namespace }}
+roleRef:
+  kind: ClusterRole
+  name: rca-correlator-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rca-correlator
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/part-of: energy-saver-addon
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: rca-correlator}
+  template:
+    metadata:
+      labels: {app: rca-correlator}
+    spec:
+      serviceAccountName: rca-correlator
+      containers:
+        - name: rca-correlator
+          image: "{{ .Values.global.image.registry }}/rca-correlator:{{ .Values.global.image.tag }}"
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          env:
+            - name: WATCHED_NAMESPACES
+              value: {{ .Values.rca.watchedNamespaces | quote }}
+            - name: RCA_INTERVAL_SECONDS
+              value: {{ .Values.rca.intervalSeconds | quote }}
+{{- end }}
+---
+{{- if .Values.autoRemediation.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: auto-remediator
+  namespace: {{ .Values.global.namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: auto-remediator-actor
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: auto-remediator-actor-binding
+subjects:
+  - kind: ServiceAccount
+    name: auto-remediator
+    namespace: {{ .Values.global.namespace }}
+roleRef:
+  kind: ClusterRole
+  name: auto-remediator-actor
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auto-remediator
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/part-of: energy-saver-addon
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: auto-remediator}
+  template:
+    metadata:
+      labels: {app: auto-remediator}
+    spec:
+      serviceAccountName: auto-remediator
+      containers:
+        - name: auto-remediator
+          image: "{{ .Values.global.image.registry }}/auto-remediator:{{ .Values.global.image.tag }}"
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          env:
+            - name: WATCHED_NAMESPACES
+              value: {{ .Values.autoRemediation.watchedNamespaces | quote }}
+            - name: REMEDIATION_INTERVAL_SECONDS
+              value: {{ .Values.autoRemediation.intervalSeconds | quote }}
+            - name: DRY_RUN
+              value: {{ .Values.autoRemediation.dryRun | quote }}
+{{- end }}

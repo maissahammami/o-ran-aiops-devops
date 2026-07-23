@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rca-correlator
+  namespace: ricrapp
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rca-correlator-reader
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/log"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rca-correlator-reader-binding
+subjects:
+  - kind: ServiceAccount
+    name: rca-correlator
+    namespace: ricrapp
+roleRef:
+  kind: ClusterRole
+  name: rca-correlator-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rca-correlator
+  namespace: ricrapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rca-correlator
+  template:
+    metadata:
+      labels:
+        app: rca-correlator
+    spec:
+      serviceAccountName: rca-correlator
+      containers:
+        - name: rca-correlator
+          image: bitnami/kubectl:1.29
+          command: ["sh", "-c"]
+          args:
+            - "apt-get update -qq && apt-get install -y -qq python3 >/dev/null 2>&1 || true; python3 /app/rca_correlator.py"
+          env:
+            - name: WATCHED_NAMESPACES
+              value: "ricplt,ricrapp,ricxapp,smo,nonrtric,kafka"
+            - name: RCA_INTERVAL_SECONDS
+              value: "60"
+          volumeMounts:
+            - name: script
+              mountPath: /app/rca_correlator.py
+              subPath: rca_correlator.py
+          resources:
+            requests: {cpu: "50m", memory: "64Mi"}
+            limits: {cpu: "200m", memory: "256Mi"}
+      volumes:
+        - name: script
+          configMap:
+            name: rca-correlator-code

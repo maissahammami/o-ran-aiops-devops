@@ -1,0 +1,37 @@
+{{- if .Values.mlSurrogate.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ml-surrogate
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app.kubernetes.io/part-of: energy-saver-addon
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: ml-surrogate}
+  template:
+    metadata:
+      labels: {app: ml-surrogate}
+    spec:
+      containers:
+        - name: ml-surrogate
+          image: "{{ .Values.global.image.registry }}/ml-surrogate:{{ .Values.global.image.tag }}"
+          imagePullPolicy: {{ .Values.global.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.mlSurrogate.servicePort }}
+          env:
+            - name: PORT
+              value: {{ .Values.mlSurrogate.servicePort | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ml-surrogate
+  namespace: {{ .Values.global.namespace }}
+spec:
+  selector: {app: ml-surrogate}
+  ports:
+    - port: {{ .Values.mlSurrogate.servicePort }}
+      targetPort: {{ .Values.mlSurrogate.servicePort }}
+{{- end }}

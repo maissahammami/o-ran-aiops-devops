@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: load-forecaster
+  namespace: ricrapp
+spec:
+  schedule: "*/5 * * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: forecaster
+              image: python:3.11-slim
+              command: ["sh", "-c"]
+              args:
+                - "pip install --no-cache-dir numpy influxdb kafka-python --quiet && python /app/forecast.py --once"
+              env:
+                - name: INFLUXDB_HOST
+                  value: "influxdb.smo.svc.cluster.local"
+                - name: KAFKA_BOOTSTRAP
+                  value: "nonrtric-kafka-kafka-bootstrap.kafka.svc.cluster.local:9092"
+              volumeMounts:
+                - name: script
+                  mountPath: /app/forecast.py
+                  subPath: forecast.py
+          volumes:
+            - name: script
+              configMap:
+                name: load-forecaster-code
+          restartPolicy: OnFailure

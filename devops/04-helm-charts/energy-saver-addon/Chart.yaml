@@ -1,0 +1,18 @@
+apiVersion: v2
+name: energy-saver-addon
+description: >
+  Chart Helm regroupant les modules AIOps additionnels du projet Energy-Saver
+  (détection d'anomalies, prévision de charge, RCA, auto-remédiation,
+  substitution ML) et le pont Prometheus->VES->Kafka. Remplace les
+  déploiements manuels ad-hoc (ConfigMap + kubectl apply) réalisés pendant
+  le débogage initial, par une installation reproductible et paramétrable.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - o-ran
+  - energy-saving
+  - aiops
+  - non-rt-ric
+maintainers:
+  - name: Energy-Saver-Tests
