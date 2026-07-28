@@ -8,6 +8,7 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 
 jobs:
@@ -55,6 +56,15 @@ jobs:
         push: true
         tags: |
           ghcr.io/${{ github.repository_owner }}/energy-saver-rapp:latest
+    
+    
+    - name: Extract metadata
+      uses: docker/metadata-action@v5
+      with:
+        images: ghcr.io/${{ github.repository_owner }}/energy-saver-rapp 
+        
+        
+             
           
           
           
