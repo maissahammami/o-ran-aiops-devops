@@ -46,3 +46,17 @@ jobs:
         push: true
         tags: |
           ghcr.io/${{ github.repository_owner }}/load-forecaster:latest
+    
+    
+    - name: Build energy saver rApp
+      uses: docker/build-push-action@v6
+      with:
+        context: ./rapp/energy-saver
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/energy-saver-rapp:latest
+          
+          
+          
+          
+          

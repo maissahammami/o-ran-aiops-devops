@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: CronJob
+
+metadata:
+  name: load-forecaster
+  namespace: ricrapp
+
+spec:
+
+  schedule: "*/5 * * * *"
+
+  concurrencyPolicy: Forbid
+
+  jobTemplate:
+
+    spec:
+
+      template:
+
+        spec:
+
+          restartPolicy: OnFailure
+
+          containers:
+
+          - name: forecaster
+
+            image: ghcr.io/maissahammami/load-forecaster:latest
+
+            imagePullPolicy: Always
+
+            env:
+
+            - name: INFLUXDB_HOST
+              value: influxdb.smo.svc.cluster.local
+
+            - name: KAFKA_BOOTSTRAP
+              value: nonrtric-kafka-kafka-bootstrap.kafka.svc.cluster.local:9092

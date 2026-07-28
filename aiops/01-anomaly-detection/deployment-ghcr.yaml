@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: anomaly-detector
+  namespace: ricrapp
+  labels:
+    app: anomaly-detector
+
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: anomaly-detector
+
+  template:
+    metadata:
+      labels:
+        app: anomaly-detector
+
+    spec:
+
+      containers:
+
+      - name: anomaly-detector
+
+        image: ghcr.io/maissahammami/anomaly-detector:latest
+
+        imagePullPolicy: Always
+
+        env:
+
+        - name: INFLUXDB_HOST
+          value: influxdb.smo.svc.cluster.local
+
+        - name: KAFKA_BOOTSTRAP
+          value: nonrtric-kafka-kafka-bootstrap.kafka.svc.cluster.local:9092
+
+        - name: POLL_INTERVAL_SECONDS
+          value: "30"
+
+        resources:
+
+          requests:
+            cpu: 100m
+            memory: 128Mi
+
+          limits:
+            cpu: 500m
+            memory: 512Mi
