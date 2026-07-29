@@ -31,42 +31,81 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
 
+    # ==========================
+    # ANOMALY DETECTOR
+    # ==========================
+
     - name: Build anomaly detector
       uses: docker/build-push-action@v6
       with:
         context: ./aiops/01-anomaly-detection
-        push: true
+        load: true
         tags: |
           ghcr.io/${{ github.repository_owner }}/anomaly-detector:latest
 
+
+    - name: Scan anomaly detector with Trivy
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        image-ref: ghcr.io/${{ github.repository_owner }}/anomaly-detector:latest
+        format: table
+        severity: HIGH,CRITICAL
+
+
+    - name: Push anomaly detector
+      run: |
+        docker push ghcr.io/${{ github.repository_owner }}/anomaly-detector:latest
+
+
+
+    # ==========================
+    # LOAD FORECASTER
+    # ==========================
 
     - name: Build load forecaster
       uses: docker/build-push-action@v6
       with:
         context: ./aiops/02-forecasting
-        push: true
+        load: true
         tags: |
           ghcr.io/${{ github.repository_owner }}/load-forecaster:latest
-    
-    
+
+
+    - name: Scan load forecaster with Trivy
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        image-ref: ghcr.io/${{ github.repository_owner }}/load-forecaster:latest
+        format: table
+        severity: HIGH,CRITICAL
+
+
+    - name: Push load forecaster
+      run: |
+        docker push ghcr.io/${{ github.repository_owner }}/load-forecaster:latest
+
+
+
+    # ==========================
+    # ENERGY SAVER rAPP
+    # ==========================
+
     - name: Build energy saver rApp
       uses: docker/build-push-action@v6
       with:
         context: ./rapp/energy-saver
-        push: true
+        load: true
         tags: |
           ghcr.io/${{ github.repository_owner }}/energy-saver-rapp:latest
-    
-    
-    - name: Extract metadata
-      uses: docker/metadata-action@v5
+
+
+    - name: Scan energy saver rApp with Trivy
+      uses: aquasecurity/trivy-action@0.28.0
       with:
-        images: ghcr.io/${{ github.repository_owner }}/energy-saver-rapp 
-        
-        
-             
-          
-          
-          
-          
-          
+        image-ref: ghcr.io/${{ github.repository_owner }}/energy-saver-rapp:latest
+        format: table
+        severity: HIGH,CRITICAL
+
+
+    - name: Push energy saver rApp
+      run: |
+        docker push ghcr.io/${{ github.repository_owner }}/energy-saver-rapp:latest
