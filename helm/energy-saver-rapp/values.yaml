@@ -59,10 +59,10 @@ app:
     user_variation:
       enable: True  # Enable or disable user variation.
       percentage: 0.2  # The percentage of variation.
-      min_time_since_last_run_seconds: 60  # The minimum time since the last run in seconds.
+      min_time_since_last_run_seconds: 300 # The minimum time since the last run in seconds.
 
   nonrtric:
-    base_url_rApp_catalogue: 'http://rappcatalogueservice.nonrtric.svc.cluster.local:9085/services'  # The base URL for the rApp catalogue service.
+    base_url_rApp_catalogue: 'http://rappmanager.nonrtric.svc.cluster.local:8080/services'  # The base URL for the rApp catalogue service.
     base_url_pms: 'http://nonrtricgateway.nonrtric.svc.cluster.local:9090/a1-policy/v2'  # The base URL for the PMS service.
     service_name: 'rAppEnergySaver'  # The name of the service.
     service_version: 'v1'  # The version of the service.
@@ -72,7 +72,7 @@ app:
     policytype_id: '5'  # The policy type ID.
 
   kafka:
-    bootstrap_servers: "kafka.smo.svc.cluster.local"  # The bootstrap servers for Kafka.
+    bootstrap_servers: "nonrtric-kafka-kafka-bootstrap.kafka.svc.cluster.local"  # The bootstrap servers for Kafka.
     port: 9092  # The port for Kafka.
     enable_auto_commit: True  # Enable or disable auto commit.
     auto_commit_interval_ms: 6000  # The auto commit interval in milliseconds.
