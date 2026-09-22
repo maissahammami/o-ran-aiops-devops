@@ -1,111 +1,56 @@
-name: Docker Build and Push to GHCR
+name: Energy Saver rApp - Build, Scan and Push
 
 on:
   push:
     branches:
       - main
 
+  workflow_dispatch:
+
 permissions:
   contents: read
   packages: write
-  id-token: write
-
+  security-events: write
 
 jobs:
-
-  docker-build-push:
+  energy-saver-rapp:
 
     runs-on: ubuntu-latest
 
     steps:
 
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Energy Saver rApp
+        uses: docker/build-push-action@v6
+        with:
+          context: ./rapp/energy-saver
+          load: true
+          tags: ghcr.io/${{ github.repository_owner }}/energy-saver-rapp:latest
 
+      - name: Scan Energy Saver rApp with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ghcr.io/${{ github.repository_owner }}/energy-saver-rapp:latest
+          format: sarif
+          output: energy-trivy.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
 
-    # ==========================
-    # ANOMALY DETECTOR
-    # ==========================
+      - name: Upload Trivy SARIF report
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: energy-trivy.sarif
 
-    - name: Build anomaly detector
-      uses: docker/build-push-action@v6
-      with:
-        context: ./aiops/01-anomaly-detection
-        load: true
-        tags: |
-          ghcr.io/${{ github.repository_owner }}/anomaly-detector:latest
-
-
-    - name: Scan anomaly detector with Trivy
-      uses: aquasecurity/trivy-action@0.28.0
-      with:
-        image-ref: ghcr.io/${{ github.repository_owner }}/anomaly-detector:latest
-        format: table
-        severity: HIGH,CRITICAL
-
-
-    - name: Push anomaly detector
-      run: |
-        docker push ghcr.io/${{ github.repository_owner }}/anomaly-detector:latest
-
-
-
-    # ==========================
-    # LOAD FORECASTER
-    # ==========================
-
-    - name: Build load forecaster
-      uses: docker/build-push-action@v6
-      with:
-        context: ./aiops/02-forecasting
-        load: true
-        tags: |
-          ghcr.io/${{ github.repository_owner }}/load-forecaster:latest
-
-
-    - name: Scan load forecaster with Trivy
-      uses: aquasecurity/trivy-action@0.28.0
-      with:
-        image-ref: ghcr.io/${{ github.repository_owner }}/load-forecaster:latest
-        format: table
-        severity: HIGH,CRITICAL
-
-
-    - name: Push load forecaster
-      run: |
-        docker push ghcr.io/${{ github.repository_owner }}/load-forecaster:latest
-
-
-
-    # ==========================
-    # ENERGY SAVER rAPP
-    # ==========================
-
-    - name: Build energy saver rApp
-      uses: docker/build-push-action@v6
-      with:
-        context: ./rapp/energy-saver
-        load: true
-        tags: |
-          ghcr.io/${{ github.repository_owner }}/energy-saver-rapp:latest
-
-
-    - name: Scan energy saver rApp with Trivy
-      uses: aquasecurity/trivy-action@0.28.0
-      with:
-        image-ref: ghcr.io/${{ github.repository_owner }}/energy-saver-rapp:latest
-        format: table
-        severity: HIGH,CRITICAL
-
-
-    - name: Push energy saver rApp
-      run: |
-        docker push ghcr.io/${{ github.repository_owner }}/energy-saver-rapp:latest
+      - name: Push Energy Saver rApp to GHCR
+        run: |
+          docker push ghcr.io/${{ github.repository_owner }}/energy-saver-rapp:latest
