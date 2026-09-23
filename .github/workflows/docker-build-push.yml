@@ -42,6 +42,7 @@ jobs:
           image-ref: ghcr.io/${{ github.repository_owner }}/energy-saver-rapp:latest
           format: sarif
           output: energy-trivy.sarif
+          scanners: vuln
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: '1'
