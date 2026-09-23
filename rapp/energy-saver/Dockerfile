@@ -1,25 +1,28 @@
-FROM ghcr.io/maissahammami/cplex-python38:latest
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc g++ && \
-    rm -rf /var/lib/apt/lists/*
+FROM python:3.11-slim-bookworm
 
 WORKDIR /app
 
-COPY src/ ./src/
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY requirements.txt .
 
-# Installer les dépendances sans reconstruire docplex
-RUN pip install --no-cache-dir \
-    certifi \
-    charset-normalizer \
-    confluent-kafka \
-    requests \
-    urllib3 \
-    pandas \
-    numpy
+RUN pip install --no-cache-dir --upgrade \
+    pip \
+    "setuptools>=78.1.1" \
+    wheel && \
+    pip install --no-cache-dir -r requirements.txt && \
+    rm -f /usr/local/lib/python3.11/site-packages/pip/_vendor/bom.cdx.json
 
-# Installer uniquement docplex
-RUN pip install --no-cache-dir docplex==2.30.251
+COPY src/ ./src/
 
-ENTRYPOINT ["sleep","999999"]
+RUN useradd -m rappuser
+
+USER rappuser
+
+CMD ["python3","src/rApp_Energy_Saver.py","-c","/app/src/config/config.yaml"]
